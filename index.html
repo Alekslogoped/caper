@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<style>
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background: #f4f6fb;
+}
+
+h2 {
+  margin: 10px;
+}
+
+#controls {
+  margin-bottom: 10px;
+}
+
+#board {
+  display: grid;
+  justify-content: center;
+  margin: 10px auto;
+}
+
+.cell {
+  width: 35px;
+  height: 35px;
+  border: 1px solid #999;
+  background: #dfe6f3;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.cell.open {
+  background: #ffffff;
+  cursor: default;
+}
+
+.cell.mine {
+  background: #ffb3b3;
+}
+
+.cell.flag {
+  background: #ffeaa7;
+}
+
+#message {
+  margin-top: 10px;
+  font-weight: bold;
+}
+</style>
+</head>
+<body>
+
+<h2>💣 Сапёр</h2>
+
+<div id="controls">
+  Размер:
+  <select id="sizeSelect">
+    <option value="6">6×6</option>
+    <option value="8" selected>8×8</option>
+    <option value="10">10×10</option>
+  </select>
+
+  Мины:
+  <input type="number" id="mineInput" value="10" min="1" style="width:60px">
+
+  <button onclick="startGame()">Начать</button>
+</div>
+
+<div id="board"></div>
+<div id="message"></div>
+
+<script>
+let size = 8;
+let mines = 10;
+let board = [];
+let minePositions = [];
+let openedCount = 0;
+
+function startGame() {
+  size = parseInt(document.getElementById("sizeSelect").value);
+  mines = parseInt(document.getElementById("mineInput").value);
+  board = [];
+  minePositions = [];
+  openedCount = 0;
+  document.getElementById("message").textContent = "";
+
+  const boardDiv = document.getElementById("board");
+  boardDiv.innerHTML = "";
+  boardDiv.style.gridTemplateColumns = `repeat(${size}, 35px)`;
+
+  for (let i = 0; i < size * size; i++) {
+    board[i] = { mine: false, open: false, flag: false };
+  }
+
+  while (minePositions.length < mines) {
+    let pos = Math.floor(Math.random() * size * size);
+    if (!minePositions.includes(pos)) {
+      minePositions.push(pos);
+      board[pos].mine = true;
+    }
+  }
+
+  for (let i = 0; i < size * size; i++) {
+    const cell = document.createElement("div");
+    cell.classList.add("cell");
+    cell.dataset.index = i;
+    cell.addEventListener("click", openCell);
+    cell.addEventListener("contextmenu", toggleFlag);
+    boardDiv.appendChild(cell);
+  }
+}
+
+function openCell(e) {
+  const index = parseInt(e.target.dataset.index);
+  const cell = board[index];
+  if (cell.open || cell.flag) return;
+
+  cell.open = true;
+  e.target.classList.add("open");
+
+  if (cell.mine) {
+    e.target.textContent = "💥";
+    e.target.classList.add("mine");
+    document.getElementById("message").textContent = "Попробуй ещё раз!";
+    revealMines();
+    return;
+  }
+
+  const count = countMines(index);
+  if (count > 0) {
+    e.target.textContent = count;
+  }
+
+  openedCount++;
+  checkWin();
+}
+
+function toggleFlag(e) {
+  e.preventDefault();
+  const index = parseInt(e.target.dataset.index);
+  const cell = board[index];
+  if (cell.open) return;
+
+  cell.flag = !cell.flag;
+  e.target.textContent = cell.flag ? "🚩" : "";
+  e.target.classList.toggle("flag");
+}
+
+function countMines(index) {
+  const row = Math.floor(index / size);
+  const col = index % size;
+  let count = 0;
+
+  for (let r = -1; r <= 1; r++) {
+    for (let c = -1; c <= 1; c++) {
+      if (r === 0 && c === 0) continue;
+      let newRow = row + r;
+      let newCol = col + c;
+      if (newRow >= 0 && newRow < size && newCol >= 0 && newCol < size) {
+        let newIndex = newRow * size + newCol;
+        if (board[newIndex].mine) count++;
+      }
+    }
+  }
+
+  return count;
+}
+
+function revealMines() {
+  document.querySelectorAll(".cell").forEach((cellDiv, i) => {
+    if (board[i].mine) {
+      cellDiv.textContent = "💣";
+      cellDiv.classList.add("mine");
+    }
+  });
+}
+
+function checkWin() {
+  if (openedCount === size * size - mines) {
+    document.getElementById("message").textContent = "🎉 Все мины найдены!";
+  }
+}
+
+startGame();
+</script>
+
+</body>
+</html>
